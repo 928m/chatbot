@@ -1,4 +1,5 @@
 import {
+  BotLoading,
   ChatBox,
   InputField,
   Message,
@@ -46,7 +47,11 @@ export default function Chat() {
             <Spacing size={20} />
           </div>
         ))}
-        {loading && <Message type="BOT">Loading...</Message>}
+        {loading && (
+          <Message type="BOT">
+            <BotLoading />
+          </Message>
+        )}
       </MessageBox>
       <InputField onClickSubmit={handleClickSubmit} />
     </ChatBox>

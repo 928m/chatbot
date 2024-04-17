@@ -1,3 +1,4 @@
+export { default as BotLoading } from "@/app/components/BotLoading";
 export { default as Button } from "@/app/components/Button";
 export { default as Chat } from "@/app/components/Chat";
 export { default as ChatBox } from "@/app/components/ChatBox";
