@@ -1,14 +1,12 @@
-export default function Input({
-  onChange,
-}: {
-  onChange: (ev: React.ChangeEvent<HTMLInputElement>) => void;
-}) {
+export default function Input(
+  props: React.InputHTMLAttributes<HTMLInputElement>
+) {
   return (
     <div className="w-full">
       <input
         type="text"
-        onChange={onChange}
         className="flex w-full h-[40px] px-[10px] bg-transparent"
+        {...props}
       />
     </div>
   );

@@ -3,5 +3,9 @@ export default function MessageBox({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="flex flex-col p-[20px]">{children}</div>;
+  return (
+    <div className="flex flex-col p-[20px] h-[500px] overflow-auto scroll-smooth">
+      {children}
+    </div>
+  );
 }
