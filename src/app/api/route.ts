@@ -1,3 +1,9 @@
+import { jsonLoader, urlLoader } from "@/app/api/lib/loader";
+import {
+  getRetrievalChain,
+  setRetrievalChain,
+} from "@/app/api/lib/retrievalChain";
+
 import {
   HarmBlockThreshold,
   HarmCategory,
@@ -8,22 +14,34 @@ import {
   ChatGoogleGenerativeAI,
   GoogleGenerativeAIEmbeddings,
 } from "@langchain/google-genai";
+import fs from "fs";
 import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 import { createRetrievalChain } from "langchain/chains/retrieval";
+import { JSONLoader } from "langchain/document_loaders/fs/json";
 import { CheerioWebBaseLoader } from "langchain/document_loaders/web/cheerio";
-// import { AIMessage, HumanMessage } from "langchain/schema";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { MemoryVectorStore } from "langchain/vectorstores/memory";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const apiKey = process.env.GOOGLE_GENAI_API_KEY;
 
 export async function POST(req: Request) {
   try {
-    const { message: humanMessage } = await req.json();
-    const loader = new CheerioWebBaseLoader(
-      "https://react.dev/reference/react"
-    );
+    const { dataType, data, customPrompt } = await req.json();
+    let loader: JSONLoader | CheerioWebBaseLoader | null = null;
+
+    if (dataType === "json") {
+      fs.writeFileSync("src/app/api/data.json", JSON.stringify(data));
+      loader = jsonLoader("src/app/api/data.json");
+    }
+
+    if (dataType === "url") {
+      loader = urlLoader(data);
+    }
+
+    if (!loader) {
+      throw new Error("Invalid data type");
+    }
 
     const docs = await loader.load();
 
@@ -48,7 +66,7 @@ export async function POST(req: Request) {
 
     const embeddings = new GoogleGenerativeAIEmbeddings({
       taskType: TaskType.RETRIEVAL_DOCUMENT,
-      title: "React Reference",
+      title: `${dataType} data`,
       apiKey,
     });
 
@@ -60,10 +78,7 @@ export async function POST(req: Request) {
     const retriever = vectorStore.asRetriever();
 
     const prompt = ChatPromptTemplate.fromTemplate(`
-      한국어로 답해주세요.
-      제공된 문서와 문맥을 기반으로 질문에 답하십시오.
-      예제 코드 만들어주세요.
-      참고한 문서의 원본 내용이 있는 링크도 함께 제공해주세요.:
+      ${customPrompt}:
 
       <context>
       {context}
@@ -77,10 +92,28 @@ export async function POST(req: Request) {
       prompt,
     });
 
-    const retrievalChain = await createRetrievalChain({
-      combineDocsChain: documentChain,
-      retriever,
-    });
+    setRetrievalChain(
+      await createRetrievalChain({
+        combineDocsChain: documentChain,
+        retriever,
+      })
+    );
+
+    return NextResponse.json({ result: "success" });
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json({ error: err });
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const humanMessage = req.nextUrl.searchParams.get("message");
+    const retrievalChain = await getRetrievalChain();
+
+    if (!retrievalChain) {
+      throw new Error("retrievalChain is not defined");
+    }
 
     const result = await retrievalChain.invoke({
       input: humanMessage,
