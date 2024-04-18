@@ -7,9 +7,8 @@ import {
   Spacing,
 } from "@/app/components";
 
-import { testData } from "@/app/test-data";
-
 import axios from "axios";
+import { marked } from "marked";
 import { useEffect, useState } from "react";
 
 type ChatMessage = {
@@ -26,8 +25,9 @@ export default function Chat() {
     try {
       setLoading(true);
       const { data } = await axios.get("/api", { params: { message: value } });
+      const botMessage = await marked.parse(data.result);
 
-      setChatMessages((prev) => [...prev, { type: "BOT", value: data.result }]);
+      setChatMessages((prev) => [...prev, { type: "BOT", value: botMessage }]);
     } catch (err: any) {
       console.error(err.message);
       alert("메시지 전송에 실패했습니다.");
@@ -46,14 +46,13 @@ export default function Chat() {
     try {
       setBotServerLoading(true);
       await axios.post("/api", {
-        dataType: "json",
+        dataType: "url",
         customPrompt: `
-          한국어로 답해주세요.
-          전달된 데이터는 상품 정보 리스트 입니다.
-          상품 이름, 가격, 할인, 브랜드 이름 정보와 함께 상품의 'https://product.29cm.co.kr/catalog/[itemNo]'로 url을 제공해주세요.
+          제공된 문서와 문맥을 기반으로 질문에 답하십시오.
+          예제 코드 만들어주세요.
+          참고한 문서의 원본 내용이 있는 링크도 함께 제공해주세요.:
         `,
-        // api 호출로 받아온 json 데이터로 가정
-        data: testData,
+        data: "https://react.dev/reference/react",
       });
     } catch (error) {
       console.error(error);
@@ -76,7 +75,7 @@ export default function Chat() {
       <MessageBox>
         {chatMessages.map((message, index) => (
           <div key={index}>
-            <Message type={message.type}>{message.value}</Message>
+            <Message type={message.type} content={message.value} />
             <Spacing size={20} />
           </div>
         ))}
